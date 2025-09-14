@@ -1,7 +1,8 @@
-'use client';
+'use client'
 
 import React, { useState, useEffect, useCallback } from 'react';
 import styles from './UserList.module.css';
+
 
 interface User {
   index: number;
@@ -15,146 +16,66 @@ interface AlphabetInfo {
 
 interface UserListResponse {
   users: User[];
-  hasNext: boolean;
-  totalElements?: number;
+  totalCount: number;
 }
 
+
 const UserList: React.FC = () => {
+
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalPages, setTotalPages] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [alphabetInfo, setAlphabetInfo] = useState<AlphabetInfo[]>([]);
   const [selectedLetter, setSelectedLetter] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loadTime, setLoadTime] = useState<number>(0);
 
   const API_BASE = 'http://localhost:8080/api/users';
 
-  // Load alphabet navigation data
-  useEffect(() => {
-    const loadAlphabetInfo = async () => {
-      try {
-        const response = await fetch(`${API_BASE}/alphabet`);
-        if (!response.ok) {
-          throw new Error('Failed to load alphabet information');
-        }
-        const data = await response.json();
-        setAlphabetInfo(data);
-      } catch (error) {
-        console.error('Error loading alphabet info:', error);
-        // Fallback: Create alphabet buttons without counts
-        const fallbackAlphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => ({
-          letter,
-          count: 0
-        }));
-        setAlphabetInfo(fallbackAlphabet);
-        console.log('Using fallback alphabet navigation');
-      }
-    };
-
-    loadAlphabetInfo();
-  }, []);
-
-  // Load users based on current state
-  const loadUsers = useCallback(async (pageNum = 0, reset = false) => {
-    if (loading) return;
-    
+  const fetchUsers = useCallback(async (page: number = 0, size: number = 50) => {
+    const startTime = performance.now();
     setLoading(true);
     setError(null);
-    
     try {
-      let url: string;
-      
-      // Build URL based on combined filters
-      if (selectedLetter && searchQuery.trim()) {
-        // Combined: Search within specific letter range
-        url = `${API_BASE}/letter/${selectedLetter}/search?q=${encodeURIComponent(searchQuery.trim())}&page=${pageNum}&size=50`;
-      } else if (selectedLetter) {
-        // Only alphabet filter
-        url = `${API_BASE}/letter/${selectedLetter}?page=${pageNum}&size=50`;
-      } else if (searchQuery.trim()) {
-        // Only search filter
-        url = `${API_BASE}/search?q=${encodeURIComponent(searchQuery.trim())}&page=${pageNum}&size=50`;
-      } else {
-        // No filters - show all users
-        url = `${API_BASE}?page=${pageNum}&size=50`;
-      }
-
+      const url = `${API_BASE}?page=${page}&size=${size}`;
+      console.log("Fetching users:", url);
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data: UserListResponse = await response.json();
+      const endTime = performance.now();
+      const loadTimeMs = Math.round(endTime - startTime);
       
-      if (reset) {
-        setUsers(data.users);
-      } else {
-        setUsers(prev => [...prev, ...data.users]);
-      }
+      console.log("=== API RESPONSE ===");
+      console.log("Requested Page:", page, "Size:", size);
+      console.log("Users received:", data.users.length);
+      console.log("Total count:", data.totalCount);
+      console.log("Load time:", loadTimeMs + "ms");
+      console.log("First user:", data.users[0]);
+      console.log("Last user:", data.users[data.users.length - 1]);
+      console.log("==================");
       
-      setHasMore(data.hasNext);
-      setPage(pageNum);
-    } catch (error) {
-      console.error('Error loading users:', error);
-      setError('Failed to load users. Please check if the API server is running.');
+      setUsers(data.users);
+      setTotalCount(data.totalCount);
+      setTotalPages(Math.ceil(data.totalCount / size));
+      setLoadTime(loadTimeMs);
+      setAlphabetInfo([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
-  }, [loading, selectedLetter, searchQuery]);
-
-  // Initial load and reload when filters change
-  useEffect(() => {
-    loadUsers(0, true);
-  }, [selectedLetter, searchQuery]);
-
-  // Infinite scroll handler
-  const handleScroll = useCallback(() => {
-    if (window.innerHeight + document.documentElement.scrollTop 
-        >= document.documentElement.offsetHeight - 1000) {
-      if (hasMore && !loading) {
-        loadUsers(page + 1, false);
-      }
-    }
-  }, [hasMore, loading, page, loadUsers]);
+  }, []);
 
   useEffect(() => {
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
-
-  // Handle alphabet navigation
-  const handleLetterClick = (letter: string) => {
-    // Toggle letter selection - if same letter clicked, deselect it
-    if (selectedLetter === letter) {
-      setSelectedLetter(null);
-    } else {
-      setSelectedLetter(letter);
-    }
-    setPage(0);
-  };
-
-  // Handle search
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-    setPage(0);
-  };
-
-  // Clear all filters
-  const clearFilters = () => {
-    setSelectedLetter(null);
-    setSearchQuery('');
-    setPage(0);
-  };
-
-  // Debug logging
-  console.log('UserList rendering:', { 
-    users: users.length, 
-    alphabetInfo: alphabetInfo.length, 
-    loading, 
-    error 
-  });
+    fetchUsers(currentPage, pageSize);
+  }, [fetchUsers, currentPage, pageSize]);
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '1200px', margin: '0 auto' }}>
@@ -165,23 +86,24 @@ const UserList: React.FC = () => {
       {/* Debug Info */}
       <div style={{ background: '#1f2937', color: '#f9fafb', padding: '15px', margin: '15px 0', border: '2px solid #3b82f6', borderRadius: '8px' }}>
         <h4 style={{ color: '#60a5fa', margin: '0 0 10px 0', fontSize: '16px' }}>🔍 Debug Info:</h4>
-        <p style={{ margin: '5px 0', color: '#d1d5db' }}>Users loaded: <span style={{ color: '#10b981', fontWeight: 'bold' }}>{users.length}</span></p>
-        <p style={{ margin: '5px 0', color: '#d1d5db' }}>Alphabet info: <span style={{ color: '#10b981', fontWeight: 'bold' }}>{alphabetInfo.length}</span> letters</p>
+        <p style={{ margin: '5px 0', color: '#d1d5db' }}>Total users: <span style={{ color: '#10b981', fontWeight: 'bold' }}>{totalCount.toLocaleString()}</span></p>
+        <p style={{ margin: '5px 0', color: '#d1d5db' }}>Current page: <span style={{ color: '#10b981', fontWeight: 'bold' }}>{currentPage + 1} of {totalPages}</span></p>
+        <p style={{ margin: '5px 0', color: '#d1d5db' }}>Page size: <span style={{ color: '#10b981', fontWeight: 'bold' }}>{pageSize.toLocaleString()}</span></p>
+        <p style={{ margin: '5px 0', color: '#d1d5db' }}>Users on this page: <span style={{ color: '#10b981', fontWeight: 'bold' }}>{users?.length || 0}</span></p>
+        <p style={{ margin: '5px 0', color: '#d1d5db' }}>Load time: <span style={{ color: loadTime > 2000 ? '#ef4444' : loadTime > 1000 ? '#f59e0b' : '#10b981', fontWeight: 'bold' }}>{loadTime}ms</span></p>
         <p style={{ margin: '5px 0', color: '#d1d5db' }}>Loading: <span style={{ color: loading ? '#f59e0b' : '#10b981', fontWeight: 'bold' }}>{loading ? 'Yes' : 'No'}</span></p>
         <p style={{ margin: '5px 0', color: '#d1d5db' }}>Error: <span style={{ color: error ? '#ef4444' : '#10b981', fontWeight: 'bold' }}>{error || 'None'}</span></p>
-        <p style={{ margin: '5px 0', color: '#d1d5db' }}>Selected letter: <span style={{ color: selectedLetter ? '#3b82f6' : '#6b7280', fontWeight: 'bold' }}>{selectedLetter || 'None'}</span></p>
-        <p style={{ margin: '5px 0', color: '#d1d5db' }}>Search query: <span style={{ color: searchQuery ? '#3b82f6' : '#6b7280', fontWeight: 'bold' }}>"{searchQuery}"</span></p>
       </div>
       
       {/* Error Display */}
-      {error && (
+      {/* {error && (
         <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '0.5rem' }}>
           {error}
         </div>
-      )}
+      )} */}
       
       {/* Search Bar */}
-      <div style={{ marginBottom: '1.5rem' }}>
+      {/* <div style={{ marginBottom: '1.5rem' }}>
         <div style={{ position: 'relative' }}>
           <input
             type="text"
@@ -199,10 +121,10 @@ const UserList: React.FC = () => {
             </button>
           )}
         </div>
-      </div>
+      </div> */}
 
       {/* Alphabet Navigation */}
-      <div style={{ marginBottom: '1.5rem' }}>
+      {/* <div style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151' }}>Quick Navigation:</h3>
           <button
@@ -238,10 +160,10 @@ const UserList: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
+      </div> */}
 
       {/* User List */}
-      <div className={styles.userListSection}>
+      <div className={styles.userListSection} style={{ height: 'calc(100vh - 300px)', minHeight: '500px' }}>
         <h3 className={styles.userListTitle}>
           {selectedLetter && searchQuery ? 
             `Users starting with '${selectedLetter}' containing '${searchQuery}'` :
@@ -249,8 +171,94 @@ const UserList: React.FC = () => {
            searchQuery ? `Search results for '${searchQuery}'` : 
            'All Users'}
         </h3>
+
+        {/* Pagination Controls - At Top of Table */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          padding: '1rem',
+          backgroundColor: '#f8fafc',
+          borderTop: '1px solid #e2e8f0',
+          borderBottom: '1px solid #e2e8f0'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <button
+              onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+              disabled={currentPage === 0 || loading}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: currentPage === 0 || loading ? '#e2e8f0' : '#3b82f6',
+                color: currentPage === 0 || loading ? '#9ca3af' : 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: currentPage === 0 || loading ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500'
+              }}
+            >
+              ← Previous
+            </button>
+            
+            <span style={{ 
+              fontSize: '0.875rem', 
+              color: '#374151',
+              fontWeight: '500'
+            }}>
+              Page {currentPage + 1} of {totalPages}
+            </span>
+            
+            <button
+              onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
+              disabled={currentPage >= totalPages - 1 || loading}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: currentPage >= totalPages - 1 || loading ? '#e2e8f0' : '#3b82f6',
+                color: currentPage >= totalPages - 1 || loading ? '#9ca3af' : 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: currentPage >= totalPages - 1 || loading ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500'
+              }}
+            >
+              Next →
+            </button>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label style={{ fontSize: '0.875rem', color: '#374151' }}>Page size:</label>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(0); // Reset to first page when changing page size
+              }}
+              disabled={loading}
+              style={{
+                padding: '0.25rem 0.5rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '4px',
+                fontSize: '0.875rem',
+                backgroundColor: 'white',
+                color: '#374151',
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={200}>200</option>
+              <option value={1000}>1000</option>
+              <option value={2000}>2000</option>
+              <option value={5000}>5000</option>
+              <option value={10000}>10000</option>
+              <option value={50000}>50000</option>
+            </select>
+          </div>
+        </div>
         
-        <div className={styles.userListContainer}>
+        <div className={styles.userListContainer} style={{ height: 'calc(100% - 120px)', overflowY: 'auto' }}>
           {users.length === 0 && !loading ? (
             <div className={styles.userListEmpty}>
               No users found. Try adjusting your search or filters.
@@ -278,16 +286,23 @@ const UserList: React.FC = () => {
             </div>
           )}
           
-          {!hasMore && users.length > 0 && (
-            <div className={styles.loadingEnd}>
-              No more users to load
+          {users.length > 0 && (
+            <div style={{ 
+              padding: '1rem', 
+              textAlign: 'center', 
+              color: '#6b7280', 
+              fontSize: '0.875rem',
+              borderTop: '1px solid #e5e7eb',
+              marginTop: '1rem'
+            }}>
+              Showing {users.length} of {totalCount.toLocaleString()} users
             </div>
           )}
         </div>
       </div>
 
       {/* Stats */}
-      <div className={styles.statsContainer}>
+      {/* <div className={styles.statsContainer}>
         <div className={styles.statsText}>
           <div>Loaded: <span className={styles.statsValue}>{users.length.toLocaleString()}</span> users</div>
           {selectedLetter && (
@@ -303,9 +318,9 @@ const UserList: React.FC = () => {
             <div>Showing all users</div>
           )}
         </div>
-      </div>
+      </div> */}
     </div>
   );
-};
+}
 
 export default UserList;
