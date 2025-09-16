@@ -78,7 +78,7 @@ const UserList: React.FC = () => {
   }, [fetchUsers, currentPage, pageSize]);
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '1200px', margin: '0 auto', overflowX: 'hidden', width: '100%' }}>
       <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#1f2937' }}>
         User List (630K+ Users) - DEBUG MODE
       </h1>
@@ -163,7 +163,7 @@ const UserList: React.FC = () => {
       </div> */}
 
       {/* User List */}
-      <div className={styles.userListSection} style={{ height: 'calc(100vh - 300px)', minHeight: '500px' }}>
+      <div className={styles.userListSection}>
         <h3 className={styles.userListTitle}>
           {selectedLetter && searchQuery ? 
             `Users starting with '${selectedLetter}' containing '${searchQuery}'` :
@@ -256,9 +256,8 @@ const UserList: React.FC = () => {
               <option value={50000}>50000</option>
             </select>
           </div>
-        </div>
-        
-        <div className={styles.userListContainer} style={{ height: 'calc(100% - 120px)', overflowY: 'auto' }}>
+        </div> 
+        <div className={styles.userListContainer}>
           {users.length === 0 && !loading ? (
             <div className={styles.userListEmpty}>
               No users found. Try adjusting your search or filters.

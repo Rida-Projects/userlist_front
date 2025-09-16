@@ -149,7 +149,7 @@
 }
 
 .userListContainer {
-  max-height: 24rem;
+  max-height: 30rem;
   overflow-y: auto;
   border: 1px solid #d1d5db;
   border-radius: 0.5rem;
