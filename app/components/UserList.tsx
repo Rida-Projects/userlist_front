@@ -35,13 +35,26 @@ const UserList: React.FC = () => {
   const [loadTime, setLoadTime] = useState<number>(0);
 
   const API_BASE = 'http://localhost:8080/api/users';
+  const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
-  const fetchUsers = useCallback(async (page: number = 0, size: number = 50) => {
+  const handleLetterClick = useCallback((letter: string) => {
+    setSelectedLetter(letter);
+    setCurrentPage(0);
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setSelectedLetter(null);
+    setCurrentPage(0);
+  }, []);
+
+  const fetchUsers = useCallback(async (page: number = 0, size: number = 50, letter?: string) => {
     const startTime = performance.now();
     setLoading(true);
     setError(null);
     try {
-      const url = `${API_BASE}?page=${page}&size=${size}`;
+      const url = letter
+        ? `${API_BASE}/letter/${encodeURIComponent(letter.toLowerCase())}?page=${page}&size=${size}`
+        : `${API_BASE}?page=${page}&size=${size}`;
       console.log("Fetching users:", url);
       const response = await fetch(url);
       if (!response.ok) {
@@ -74,8 +87,8 @@ const UserList: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchUsers(currentPage, pageSize);
-  }, [fetchUsers, currentPage, pageSize]);
+    fetchUsers(currentPage, pageSize, selectedLetter ?? undefined);
+  }, [fetchUsers, currentPage, pageSize, selectedLetter]);
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '1200px', margin: '0 auto', overflowX: 'hidden', width: '100%' }}>
@@ -94,37 +107,9 @@ const UserList: React.FC = () => {
         <p style={{ margin: '5px 0', color: '#d1d5db' }}>Loading: <span style={{ color: loading ? '#f59e0b' : '#10b981', fontWeight: 'bold' }}>{loading ? 'Yes' : 'No'}</span></p>
         <p style={{ margin: '5px 0', color: '#d1d5db' }}>Error: <span style={{ color: error ? '#ef4444' : '#10b981', fontWeight: 'bold' }}>{error || 'None'}</span></p>
       </div>
-      
-      {/* Error Display */}
-      {/* {error && (
-        <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '0.5rem' }}>
-          {error}
-        </div>
-      )} */}
-      
-      {/* Search Bar */}
-      {/* <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ position: 'relative' }}>
-          <input
-            type="text"
-            placeholder="Search users..."
-            value={searchQuery}
-            onChange={handleSearch}
-            style={{ width: '100%', maxWidth: '28rem', padding: '0.75rem 1rem', fontSize: '1.125rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', outline: 'none', color: '#1f2937', backgroundColor: 'white' }}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem' }}
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      </div> */}
 
       {/* Alphabet Navigation */}
-      {/* <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
           <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151' }}>Quick Navigation:</h3>
           <button
@@ -135,32 +120,26 @@ const UserList: React.FC = () => {
           </button>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-          {Array.isArray(alphabetInfo) && alphabetInfo.length > 0 ? (
-            alphabetInfo.map(info => (
-              <button
-                key={info.letter}
-                onClick={() => handleLetterClick(info.letter)}
-                style={{
-                  padding: '0.5rem 0.75rem',
-                  border: '1px solid #3b82f6',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  backgroundColor: selectedLetter === info.letter ? '#3b82f6' : 'white',
-                  color: selectedLetter === info.letter ? 'white' : '#3b82f6'
-                }}
-              >
-                {info.letter} {info.count > 0 ? `(${info.count.toLocaleString()})` : ''}
-              </button>
-            ))
-          ) : (
-            <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-              Loading alphabet navigation...
-            </div>
-          )}
+          {LETTERS.map(l => (
+            <button
+              key={l}
+              onClick={() => handleLetterClick(l)}
+              style={{
+                padding: '0.5rem 0.75rem',
+                border: '1px solid #3b82f6',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                backgroundColor: selectedLetter === l ? '#3b82f6' : 'white',
+                color: selectedLetter === l ? 'white' : '#3b82f6'
+              }}
+            >
+              {l}
+            </button>
+          ))}
         </div>
-      </div> */}
+      </div>
 
       {/* User List */}
       <div className={styles.userListSection}>
@@ -299,25 +278,6 @@ const UserList: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Stats */}
-      {/* <div className={styles.statsContainer}>
-        <div className={styles.statsText}>
-          <div>Loaded: <span className={styles.statsValue}>{users.length.toLocaleString()}</span> users</div>
-          {selectedLetter && (
-            <div>Letter filter: <span className={styles.statsValue}>{selectedLetter}</span></div>
-          )}
-          {searchQuery && (
-            <div>Search query: <span className={styles.statsValue}>"{searchQuery}"</span></div>
-          )}
-          {selectedLetter && searchQuery && (
-            <div>Combined filters: <span className={styles.statsValue}>{selectedLetter} + "{searchQuery}"</span></div>
-          )}
-          {!selectedLetter && !searchQuery && (
-            <div>Showing all users</div>
-          )}
-        </div>
-      </div> */}
     </div>
   );
 }
