@@ -34,7 +34,8 @@ const UserList: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [loadTime, setLoadTime] = useState<number>(0);
 
-  const API_BASE = 'http://localhost:8080/api/users';
+  const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080/api/users').replace(/\/$/, '');
+
   const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
   const handleLetterClick = useCallback((letter: string) => {
