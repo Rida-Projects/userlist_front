@@ -54,7 +54,7 @@ const UserList: React.FC = () => {
     setError(null);
     try {
       const url = letter
-        ? `${API_BASE}/letter/${encodeURIComponent(letter.toLowerCase())}?page=${page}&size=${size}`
+        ? `${API_BASE}/letter/${encodeURIComponent(letter.toUpperCase())}?page=${page}&size=${size}`
         : `${API_BASE}?page=${page}&size=${size}`;
       console.log("Fetching users:", url);
       const response = await fetch(url);
