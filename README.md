@@ -31,9 +31,6 @@ The challenge was to create a frontend that can handle a very large user list (6
 
 - **Infinite Scroll**: Seamlessly load more users as you scroll down
 - **Alphabet Navigation**: Quick jump to users starting with specific letters (A-Z)
-- **Real-time Search**: Filter users by name with instant results
-- **Responsive Design**: Works on desktop and mobile devices
-- **Error Handling**: Graceful degradation when API is unavailable
 - **Performance Optimized**: Smooth scrolling even with large datasets
 
 ## Getting Started
@@ -173,41 +170,4 @@ npm start
 - **Scroll Performance**: 60fps maintained with infinite scroll
 - **Memory Usage**: Stable memory consumption regardless of total users
 - **Network Efficiency**: Only loads data as needed, reducing bandwidth usage
-
-## Browser Compatibility
-
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-## Troubleshooting
-
-### Common Issues
-
-1. **API Connection Failed**
-   - Ensure backend is running on `http://localhost:8080`
-   - Check CORS configuration in backend
-   - Verify network connectivity
-
-2. **Slow Performance**
-   - Reduce page size in configuration
-   - Check browser developer tools for memory leaks
-   - Ensure backend is responding quickly
-
-3. **Search Not Working**
-   - Verify users are loaded before searching
-   - Check for special characters in search terms
-   - Clear search and try again
-
-## Future Enhancements
-
-- **Virtual Scrolling**: For even better performance with millions of users
-- **Caching**: Local storage for frequently accessed data
-- **Advanced Filters**: Date ranges, user attributes, etc.
-- **Export Functionality**: Download filtered user lists
-- **Real-time Updates**: WebSocket integration for live data
-
-## License
-
 
