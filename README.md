@@ -164,10 +164,3 @@ npm run build
 npm start
 ```
 
-## Performance Metrics
-
-- **Initial Load**: ~200ms for first 50 users
-- **Scroll Performance**: 60fps maintained with infinite scroll
-- **Memory Usage**: Stable memory consumption regardless of total users
-- **Network Efficiency**: Only loads data as needed, reducing bandwidth usage
-
